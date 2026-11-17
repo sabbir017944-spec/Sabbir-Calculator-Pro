@@ -1,0 +1,10 @@
+{
+  "name": "Sabbir Calculator Pro",
+  "short_name": "SabbirCalc",
+  "start_url": "./",
+  "display": "standalone",
+  "background_color": "#10111a",
+  "theme_color": "#10111a",
+  "description": "Offline scientific calculator",
+  "icons": []
+}
