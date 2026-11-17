@@ -1,4 +1,4 @@
-const CACHE="sabbir-calculator-v3";
+const CACHE="sabbir-calculator-v4";
 const FILES=["./","./index.html","./manifest.json"];
 self.addEventListener("install",event=>event.waitUntil((async()=>{const cache=await caches.open(CACHE);await cache.addAll(FILES);await self.skipWaiting()})()));
 self.addEventListener("activate",event=>event.waitUntil((async()=>{const keys=await caches.keys();await Promise.all(keys.filter(k=>k.startsWith("sabbir-calculator-")&&k!==CACHE).map(k=>caches.delete(k)));await self.clients.claim()})()));
