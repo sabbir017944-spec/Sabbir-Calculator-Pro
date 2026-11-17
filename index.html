@@ -24,6 +24,13 @@ button{font:inherit;border:0;cursor:pointer;touch-action:manipulation}
 footer{color:var(--muted);font-size:11px;text-align:center;margin-top:auto;padding-top:8px}
 .modal{position:fixed;inset:0;background:#0009;display:none;align-items:flex-end;justify-content:center;padding:12px}.sheet{width:min(100%,470px);max-height:75vh;overflow:auto;background:#1b1d2b;border:1px solid #37394d;border-radius:22px;padding:18px}.sheet h3{margin:0 0 12px}.history-item{padding:12px 0;border-bottom:1px solid #343649;color:#dfe0ec}.history-item small{display:block;color:var(--muted);margin-bottom:4px}
 @media(min-height:800px){.key{height:68px}}
+
+.vault-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-top:12px}
+.vault-tile{background:#25283a;border-radius:12px;overflow:hidden;min-height:95px;display:flex;align-items:center;justify-content:center;color:#c9b9ff}
+.vault-tile img{width:100%;height:110px;object-fit:cover}
+.vault-actions{display:flex;gap:8px;flex-wrap:wrap;margin-top:12px}
+.vault-actions button,.vault-close{background:#302746;color:white;border-radius:11px;padding:10px 12px}
+.vault-note{color:#aeb2c7;font-size:12px;line-height:1.5}
 </style>
 </head>
 <body>
@@ -42,6 +49,15 @@ footer{color:var(--muted);font-size:11px;text-align:center;margin-top:auto;paddi
 </section>
 <footer>Independent calculator • No betting or game prediction features</footer>
 </main>
+
+<div class="modal" id="vaultModal"><section class="sheet">
+<div style="display:flex;justify-content:space-between;align-items:center"><h3>Private Gallery</h3><button class="vault-close" id="vaultClose">Close</button></div>
+<p class="vault-note">Photos are encrypted and stored on this device in this browser. Clearing browser data may permanently remove them.</p>
+<div class="vault-actions"><button id="vaultAdd">＋ Add photos</button><button id="vaultLock">Lock gallery</button></div>
+<input id="vaultFiles" type="file" accept="image/*" multiple hidden>
+<div id="vaultStatus" class="vault-note" style="margin-top:10px"></div>
+<div id="vaultGrid" class="vault-grid"></div>
+</section></div>
 <div class="modal" id="modal"><section class="sheet"><div style="display:flex;justify-content:space-between;align-items:center"><h3>Calculation history</h3><button id="closeModal" style="background:#302746;color:white;border-radius:10px;padding:8px 12px">Close</button></div><div id="historyList"></div><button id="clearHistory" style="margin-top:12px;background:#39232f;color:#ff9baa;border-radius:12px;padding:11px;width:100%">Clear history</button></section></div>
 <script>
 let expr="",lastAnswer=0,deg=true,history=[];
@@ -70,8 +86,46 @@ function calc(s){
  function add(){let v=mul();while(["+","-"].includes(tokens[i])){let o=tokens[i++],b=mul();v=o==="+"?v+b:v-b}return v}
  let v=add();if(i!==tokens.length)throw Error("Syntax");if(!Number.isFinite(v))throw Error("Math");return v
 }
+
+/* Local encrypted private gallery. PIN is set on first use and never stored. */
+const VAULT_DB="sabbir-private-gallery", VAULT_STORE="photos";
+let vaultKey=null, vaultUrls=[];
+function dbOpen(){return new Promise((resolve,reject)=>{const q=indexedDB.open(VAULT_DB,1);q.onupgradeneeded=()=>q.result.createObjectStore(VAULT_STORE,{keyPath:"id",autoIncrement:true});q.onsuccess=()=>resolve(q.result);q.onerror=()=>reject(q.error)})}
+async function deriveVaultKey(pin,salt){const material=await crypto.subtle.importKey("raw",new TextEncoder().encode(pin),"PBKDF2",false,["deriveKey"]);return crypto.subtle.deriveKey({name:"PBKDF2",salt,iterations:250000,hash:"SHA-256"},material,{name:"AES-GCM",length:256},false,["encrypt","decrypt"])}
+async function vaultRecords(mode,record){const db=await dbOpen();return new Promise((resolve,reject)=>{const tx=db.transaction(VAULT_STORE,mode),st=tx.objectStore(VAULT_STORE);let req;if(mode==="readonly")req=st.getAll();else req=st.add(record);req.onsuccess=()=>resolve(req.result);req.onerror=()=>reject(req.error);tx.oncomplete=()=>db.close();tx.onerror=()=>reject(tx.error)})}
+function b64(bytes){return btoa(String.fromCharCode(...new Uint8Array(bytes)))}
+function unb64(s){return Uint8Array.from(atob(s),c=>c.charCodeAt(0))}
+async function openVault(){
+ try{
+  let saltText=localStorage.getItem("sabbirVaultSalt"),checkText=localStorage.getItem("sabbirVaultCheck");
+  let pin=prompt("Enter your 4-digit private gallery PIN:");
+  if(pin===null)return;
+  if(!/^\d{4}$/.test(pin)){alert("Please enter exactly 4 digits.");return}
+  if(!saltText){
+   const confirmPin=prompt("Set a 4-digit PIN. Enter it again to confirm:");
+   if(confirmPin!==pin){alert("PINs did not match. Try again.");return}
+   const salt=crypto.getRandomValues(new Uint8Array(16)),key=await deriveVaultKey(pin,salt),iv=crypto.getRandomValues(new Uint8Array(12)),check=await crypto.subtle.encrypt({name:"AES-GCM",iv},key,new TextEncoder().encode("SABBIR-VAULT-OK"));
+   localStorage.setItem("sabbirVaultSalt",b64(salt));localStorage.setItem("sabbirVaultCheck",JSON.stringify({iv:b64(iv),data:b64(check)}));saltText=b64(salt);checkText=localStorage.getItem("sabbirVaultCheck");
+  }
+  const key=await deriveVaultKey(pin,unb64(saltText)),check=JSON.parse(checkText);
+  const plain=await crypto.subtle.decrypt({name:"AES-GCM",iv:unb64(check.iv)},key,unb64(check.data));
+  if(new TextDecoder().decode(plain)!=="SABBIR-VAULT-OK")throw Error("PIN");
+  vaultKey=key;await renderVault();$("vaultModal").style.display="flex";
+ }catch(e){alert("Wrong PIN, or secure storage is unavailable. Please try again.");vaultKey=null}
+}
+async function renderVault(){
+ vaultUrls.forEach(URL.revokeObjectURL);vaultUrls=[];$("vaultGrid").innerHTML="";
+ const records=await vaultRecords("readonly");
+ $("vaultStatus").textContent=records.length?records.length+" encrypted photo(s) stored on this device.":"Your private gallery is empty.";
+ for(const r of records){try{const plain=await crypto.subtle.decrypt({name:"AES-GCM",iv:unb64(r.iv)},vaultKey,unb64(r.data));const url=URL.createObjectURL(new Blob([plain],{type:r.type}));vaultUrls.push(url);const tile=document.createElement("div");tile.className="vault-tile";const img=document.createElement("img");img.src=url;img.alt="Private photo";img.onclick=()=>window.open(url,"_blank");const del=document.createElement("button");del.textContent="Delete";del.style.cssText="position:absolute;bottom:5px;right:5px;background:#39232f;color:white;border-radius:8px;padding:5px 8px";tile.style.position="relative";tile.append(img,del);del.onclick=async()=>{if(!confirm("Delete this photo?"))return;const db=await dbOpen();const tx=db.transaction(VAULT_STORE,"readwrite");tx.objectStore(VAULT_STORE).delete(r.id);tx.oncomplete=()=>{db.close();renderVault()}};$("vaultGrid").append(tile)}catch(e){}}
+}
+$("vaultAdd").onclick=()=>$("vaultFiles").click();
+$("vaultFiles").onchange=async e=>{if(!vaultKey)return;const files=[...e.target.files];for(const file of files){if(!file.type.startsWith("image/"))continue;const bytes=await file.arrayBuffer(),iv=crypto.getRandomValues(new Uint8Array(12)),encrypted=await crypto.subtle.encrypt({name:"AES-GCM",iv},vaultKey,bytes);await vaultRecords("readwrite",{name:file.name,type:file.type,iv:b64(iv),data:b64(encrypted)})}e.target.value="";await renderVault()};
+function lockVault(){$("vaultModal").style.display="none";vaultKey=null;vaultUrls.forEach(URL.revokeObjectURL);vaultUrls=[];$("vaultGrid").innerHTML=""}
+$("vaultClose").onclick=lockVault;$("vaultLock").onclick=lockVault;
+
 $("keys").addEventListener("click",e=>{let b=e.target.closest("button");if(!b)return;let a=b.dataset.action,v=b.dataset.v;
- if(a==="clear")expr="";else if(a==="delete")expr=expr.slice(0,-1);else if(a==="equals"){try{let ans=calc(expr);history.unshift({q:expr,a:fmt(ans)});history=history.slice(0,50);lastAnswer=ans;exp.textContent=expr+" =";expr=fmt(ans);render()}catch(err){out.textContent="Error"}return}else if(v){expr+=v}render()});
+ if(a==="clear")expr="";else if(a==="delete")expr=expr.slice(0,-1);else if(a==="equals"){if(/^\\d{4}$/.test(expr)){openVault();expr="";render();return}try{let ans=calc(expr);history.unshift({q:expr,a:fmt(ans)});history=history.slice(0,50);lastAnswer=ans;exp.textContent=expr+" =";expr=fmt(ans);render()}catch(err){out.textContent="Error"}return}else if(v){expr+=v}render()});
 $("angleBtn").onclick=()=>{deg=!deg;$("angleBtn").textContent=deg?"DEG":"RAD"};
 $("themeBtn").onclick=()=>{let light=document.body.dataset.light!=="1";document.body.dataset.light=light?"1":"0";document.documentElement.style.setProperty("--bg",light?"#f1f2f8":"#10111a");document.documentElement.style.setProperty("--text",light?"#171827":"#f7f7fb");document.documentElement.style.setProperty("--panel",light?"#fff":"#191b28");document.querySelector(".display").style.background=light?"#fff":"linear-gradient(145deg,#202236,#171925)";document.querySelectorAll(".key").forEach(k=>{if(!k.classList.contains("equal")){k.style.background=light?"#e4e6f0":"";k.style.color=light?"#202238":""}})};
 $("historyBtn").onclick=()=>{$("historyList").innerHTML=history.length?history.map(h=>`<div class="history-item"><small>${escapeHtml(h.q)}</small>${escapeHtml(h.a)}</div>`).join(""):"<p style='color:#969bb1'>No calculations yet.</p>";$("modal").style.display="flex"};
