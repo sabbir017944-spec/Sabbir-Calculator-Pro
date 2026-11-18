@@ -1,5 +1,5 @@
-const CACHE="sabbir-calculator-v19";
-const FILES=["./","./index.html","./manifest.json","./profile-photo.b64","./app-icon.svg"];
+const CACHE="sabbir-calculator-v20";
+const FILES=["./","./index.html","./manifest.json","./profile-photo.b64","./app-icon.svg","./app-icon-192.png","./app-icon-512.png"];
 self.addEventListener("install",event=>event.waitUntil((async()=>{const cache=await caches.open(CACHE);await cache.addAll(FILES);await self.skipWaiting()})()));
 self.addEventListener("activate",event=>event.waitUntil((async()=>{const keys=await caches.keys();await Promise.all(keys.filter(k=>k.startsWith("sabbir-calculator-")&&k!==CACHE).map(k=>caches.delete(k)));await self.clients.claim()})()));
 self.addEventListener("fetch",event=>{if(event.request.method!=="GET")return;const url=new URL(event.request.url);if(url.origin===location.origin&&(event.request.mode==="navigate"||url.pathname.endsWith("/index.html"))){event.respondWith(fetch(event.request).then(response=>{const copy=response.clone();caches.open(CACHE).then(cache=>cache.put(event.request,copy));return response}).catch(()=>caches.match("./index.html")));return}event.respondWith(caches.match(event.request).then(response=>response||fetch(event.request)))});
