@@ -76,7 +76,7 @@ let expr="",lastAnswer=0,deg=true,history=[];
 $("aboutBtn").onclick=()=>{$("aboutModal").style.display="flex";};
 $("aboutClose").onclick=()=>$("aboutModal").style.display="none";
 $("aboutModal").onclick=e=>{if(e.target.id==="aboutModal")$("aboutModal").style.display="none"};
-fetch("./profile-photo.b64").then(r=>r.text()).then(data=>{$("developerPhoto").src="data:image/jpeg;base64,"+data.trim()}).catch(()=>{});
+fetch("./profile-photo.b64?v=2").then(r=>r.text()).then(data=>{$("developerPhoto").src="data:image/jpeg;base64,"+data.trim()}).catch(()=>{});
 const out=$("result"),exp=$("expression");
 function render(){exp.textContent=expr||" ";try{if(expr)out.textContent=fmt(calc(expr));else out.textContent="0"}catch(e){out.textContent="0"}}
 function fmt(n){if(!Number.isFinite(n))throw Error("Invalid");return Number(n.toPrecision(11)).toString()}
