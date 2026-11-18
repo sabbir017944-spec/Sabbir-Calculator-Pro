@@ -2,9 +2,22 @@
   "name": "Sabbir Calculator Pro",
   "short_name": "SabbirCalc",
   "start_url": "./",
-  "display": "standalone",
+  "scope": "./",
+  "display": "fullscreen",
+  "display_override": [
+    "fullscreen",
+    "standalone"
+  ],
+  "orientation": "portrait",
   "background_color": "#10111a",
   "theme_color": "#10111a",
-  "description": "Offline scientific calculator",
-  "icons": []
+  "description": "Offline scientific calculator by Sabbir",
+  "icons": [
+    {
+      "src": "./app-icon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    }
+  ]
 }
