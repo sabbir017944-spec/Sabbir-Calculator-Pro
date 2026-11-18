@@ -22,7 +22,7 @@ button{font:inherit;border:0;cursor:pointer;touch-action:manipulation}
 .key{height:62px;border-radius:17px;background:var(--key);color:var(--text);font-size:18px;font-weight:600;box-shadow:inset 0 1px #ffffff0b,0 5px 12px #0002}
 .key.fn{font-size:14px;color:#c9b9ff;background:#28243a}.key.op{background:#302746;color:#d8c8ff}.key.danger{color:#ff8f9e;background:#39232f}.key.equal{background:linear-gradient(135deg,#9b6bff,#6d4ce5);color:white;grid-row:span 2;height:auto}.key.zero{grid-column:span 2}
 footer{color:var(--muted);font-size:11px;text-align:center;margin-top:auto;padding-top:8px}
-.header-actions{display:flex;align-items:center;gap:8px}.about-btn{border:1px solid #514078;background:linear-gradient(135deg,#30244b,#211d35);color:#e5d9ff;border-radius:13px;padding:9px 12px;font-size:11px;font-weight:700}
+.header-actions{display:flex;align-items:center;gap:8px}.about-btn{width:34px;height:34px;display:grid;place-items:center;border:1px solid #7255a8;background:linear-gradient(135deg,#30244b,#211d35);color:#e5d9ff;border-radius:50%;padding:0;font-size:11px;font-weight:700;box-shadow:0 3px 12px #0005}.about-info-icon{width:17px;height:17px;display:grid;place-items:center;border:1.5px solid #d9caff;border-radius:50%;font-family:Georgia,serif;font-size:13px;font-weight:700;line-height:1}
 .display{backdrop-filter:blur(18px);background:linear-gradient(145deg,#24243bdf,#171827ed);border-color:#ffffff20}
 .key{border:1px solid #ffffff0a;transition:transform .12s,filter .12s}.key:active{transform:scale(.96);filter:brightness(1.2)}
 .sheet{box-shadow:0 24px 80px #0009}
@@ -45,7 +45,7 @@ footer{color:var(--muted);font-size:11px;text-align:center;margin-top:auto;paddi
 </head>
 <body>
 <main class="app">
-<header><div class="brand">SABBIR CALCULATOR PRO<small>SCIENTIFIC • SMART • OFFLINE</small></div><div class="header-actions"><button class="about-btn" id="aboutBtn">ABOUT</button><span class="pill">PRO EDITION</span></div></header>
+<header><div class="brand">SABBIR CALCULATOR PRO<small>SCIENTIFIC • SMART • OFFLINE</small></div><div class="header-actions"><button class="about-btn" id="aboutBtn" aria-label="About this app" title="About this app"><span class="about-info-icon">i</span></button><span class="pill">PRO EDITION</span></div></header>
 <section class="display"><div id="expression"></div><div id="result">0</div></section>
 <div class="tools"><button id="historyBtn">◷ History</button><button id="angleBtn">DEG</button><button id="themeBtn">☼ Theme</button></div>
 <section class="grid" id="keys">
@@ -71,7 +71,7 @@ footer{color:var(--muted);font-size:11px;text-align:center;margin-top:auto;paddi
 <div class="modal" id="modal"><section class="sheet"><div style="display:flex;justify-content:space-between;align-items:center"><h3>Calculation history</h3><button id="closeModal" style="background:#302746;color:white;border-radius:10px;padding:8px 12px">Close</button></div><div id="historyList"></div><button id="clearHistory" style="margin-top:12px;background:#39232f;color:#ff9baa;border-radius:12px;padding:11px;width:100%">Clear history</button></section></div>
 <script>
 let expr="",lastAnswer=0,deg=true,history=[];\n$("aboutBtn").onclick=()=>{$("aboutModal").style.display="flex";};\n$("aboutClose").onclick=()=>$("aboutModal").style.display="none";\n$("aboutModal").onclick=e=>{if(e.target.id==="aboutModal")$("aboutModal").style.display="none"};\nfetch("./profile-photo.b64").then(r=>r.text()).then(data=>{$("developerPhoto").src="data:image/jpeg;base64,"+data.trim()}).catch(()=>{});
-const $=id=>document.getElementById(id),out=$("result"),exp=$("expression");
+const out=$("result"),exp=$("expression");
 function render(){exp.textContent=expr||" ";try{if(expr)out.textContent=fmt(calc(expr));else out.textContent="0"}catch(e){out.textContent="0"}}
 function fmt(n){if(!Number.isFinite(n))throw Error("Invalid");return Number(n.toPrecision(11)).toString()}
 function factorial(n){if(n<0||n>170||!Number.isInteger(n))throw Error("Factorial");let r=1;for(let i=2;i<=n;i++)r*=i;return r}
